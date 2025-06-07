@@ -1,0 +1,66 @@
+name: Release
+permissions: read-all
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build Release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Build release
+        run: |
+          mkdir output
+          cd output
+          cmake .. -A x64 -DCMAKE_INSTALL_PREFIX=staging
+          cmake --build . --config Release --target install
+
+      - name: Create archive
+        run: |
+          cd output/staging
+          Compress-Archive -Path * -Destination w11asi-portable.zip
+
+      - name: Generate hashes
+        run: |
+          cd output/staging
+          sha256sum -b w11asi-portable.zip >SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Store release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            output/staging/SHA256SUMS
+            output/staging/w11asi-portable.zip
+
+  draft-release:
+    name: Prepare GitHub Draft Release
+    runs-on: ubuntu-latest
+    environment: release
+    needs:
+      - build
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Acquire release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: artifacts/
+
+      - name: Prepare GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run:
+          gh release create --draft --verify-tag
+            '${{ github.ref_name }}' artifacts/**
