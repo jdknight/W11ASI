@@ -7,7 +7,7 @@ set exe_path="%base_path%\w11asi.exe"
 
 if exist %exe_path% (
     reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /t REG_SZ ^
-        /v "W11ASI" /d "%exe_path%" /f >NUL
+        /v "W11ASI" /d \"%exe_path%\" /f >NUL
     if !ERRORLEVEL! neq 0 exit /b !ERRORLEVEL!
 
     echo W11ASI has been configured to startup.
